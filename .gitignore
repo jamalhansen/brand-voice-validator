@@ -7,3 +7,10 @@ __pycache__/
 .envrc
 CLAUDE.md
 uv.toml
+
+# Workspace standard ignores
+*.pyd
+*.pyo
+.DS_Store
+.coverage
+.venv/
