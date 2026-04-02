@@ -14,6 +14,8 @@ uv sync
 ```
 
 ## Usage
+The tool is available as `brand-voice-validator` after `uv sync`.
+
 ```bash
 export OBSIDIAN_VAULT_PATH="/path/to/your/vault"
 uv run brand-voice-validator score -i draft.md
