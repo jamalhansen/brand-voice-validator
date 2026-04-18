@@ -9,6 +9,7 @@ from rich.table import Table
 
 from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
+    init_config_option,
     provider_option,
     model_option,
     dry_run_option,
@@ -18,12 +19,15 @@ from local_first_common.cli import (
     resolve_provider,
     resolve_dry_run,
 )
+from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 
 from .schema import BrandVoiceScore, RuleViolation
 from .prompts import build_system_prompt, build_user_prompt
 
 _TOOL = register_tool("brand-voice-validator")
+TOOL_NAME = "brand-voice-validator"
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
 console = Console()
 app = typer.Typer(help="Scores a piece of writing against brand voice rules.")
 
@@ -77,6 +81,8 @@ def apply_guardrails(text: str, score: BrandVoiceScore) -> BrandVoiceScore:
 
 def display_score(score: BrandVoiceScore):
     """Rich display of the score result."""
+    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
     color = "green" if score.is_pass else "red"
     console.print(f"\n[bold {color}]OVERALL SCORE: {score.overall_score}/10[/bold {color}]")
     console.print(f"[bold]Pass:[/bold] {'[green]YES[/green]' if score.is_pass else '[red]NO[/red]'}")
@@ -107,6 +113,7 @@ def score(
     no_llm: bool = no_llm_option(),
     verbose: bool = verbose_option(),
     debug: bool = debug_option(),
+    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
 ):
     """Score a file against brand voice."""
     dry_run = resolve_dry_run(dry_run, no_llm)
@@ -129,7 +136,9 @@ def score(
     text_to_score = input_file.read_text()
 
     try:
-        llm = resolve_provider(PROVIDERS, provider, model, debug=debug, no_llm=no_llm)
+        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    llm = resolve_provider(PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
