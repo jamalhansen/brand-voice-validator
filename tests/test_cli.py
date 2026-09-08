@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from brand_voice_validator.logic import app, display_score
+from brand_voice_validator.cli import app, display_score
 from brand_voice_validator.schema import BrandVoiceScore, RuleViolation
 
 runner = CliRunner()
@@ -42,8 +42,8 @@ def test_display_score_fail_with_violations(capsys):
     assert "No Emoji" in captured.out
 
 
-@patch("brand_voice_validator.logic.resolve_provider")
-@patch("brand_voice_validator.logic.timed_run")
+@patch("brand_voice_validator.cli.resolve_provider")
+@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_success(
     mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
@@ -98,7 +98,7 @@ def test_score_command_no_vault_path(mock_getenv, tmp_path):
     assert "Error: OBSIDIAN_VAULT_PATH environment variable not set" in result.stdout
 
 
-@patch("brand_voice_validator.logic.resolve_provider")
+@patch("brand_voice_validator.cli.resolve_provider")
 @patch("os.getenv")
 def test_score_command_provider_resolution_error(
     mock_getenv, mock_resolve_provider, tmp_path
@@ -119,8 +119,8 @@ def test_score_command_provider_resolution_error(
     assert "Error: provider init failed" in result.stdout
 
 
-@patch("brand_voice_validator.logic.resolve_provider")
-@patch("brand_voice_validator.logic.timed_run")
+@patch("brand_voice_validator.cli.resolve_provider")
+@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_processing_error(
     mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
@@ -146,8 +146,8 @@ def test_score_command_processing_error(
     assert "Error during processing: completion blew up" in result.stdout
 
 
-@patch("brand_voice_validator.logic.resolve_provider")
-@patch("brand_voice_validator.logic.timed_run")
+@patch("brand_voice_validator.cli.resolve_provider")
+@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_json_and_pipe(
     mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path

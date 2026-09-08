@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-brand-voice-validator = "brand_voice_validator.logic:app"
+brand-voice-validator = "brand_voice_validator.cli:app"
 
 [build-system]
 requires = ["hatchling"]
