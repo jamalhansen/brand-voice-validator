@@ -144,3 +144,41 @@ def test_score_command_processing_error(
     result = runner.invoke(app, ["--input", str(input_file), "--no-llm"])
     assert result.exit_code == 1
     assert "Error during processing: completion blew up" in result.stdout
+
+
+@patch("brand_voice_validator.logic.resolve_provider")
+@patch("brand_voice_validator.logic.timed_run")
+@patch("os.getenv")
+def test_score_command_json_and_pipe(
+    mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
+):
+    vault_path = tmp_path / "vault"
+    brand_dir = vault_path / "brand"
+    brand_dir.mkdir(parents=True)
+    (brand_dir / "_BRAND_VOICE.md").write_text("Brand voice rules...")
+    mock_getenv.return_value = str(vault_path)
+
+    mock_llm = MagicMock()
+    mock_llm.model = "mock-model"
+    mock_llm.complete.return_value = BrandVoiceScore(
+        overall_score=9.0,
+        violations=[],
+        summary="Great job!",
+        strengths=["Clear"],
+        is_pass=True,
+    )
+    mock_resolve_provider.return_value = mock_llm
+    mock_timed_run.return_value.__enter__.return_value = MagicMock()
+
+    # Test --json
+    input_file = tmp_path / "input.md"
+    input_file.write_text("Input text with python reference")
+    res_json = runner.invoke(app, ["--input", str(input_file), "--no-llm", "--json"])
+    assert res_json.exit_code == 0
+    assert '"overall_score": 9.0' in res_json.stdout
+
+    # Test stdin pipe with passing text
+    res_pipe = runner.invoke(app, ["-", "--no-llm"], input="Input text with python reference")
+    assert res_pipe.exit_code == 0
+    assert "Input text with python reference" in res_pipe.stdout
+

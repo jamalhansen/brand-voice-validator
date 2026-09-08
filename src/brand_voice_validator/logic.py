@@ -1,5 +1,7 @@
+import logging
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -16,14 +18,18 @@ from local_first_common.cli import (
     no_llm_option,
     verbose_option,
     debug_option,
+    pipe_option,
+    json_option,
     resolve_provider,
     resolve_dry_run,
 )
+from local_first_common.logging import setup_logging
 from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 
 from .schema import BrandVoiceScore, RuleViolation
 from .prompts import build_system_prompt, build_user_prompt
+
 
 TOOL_NAME = "brand-voice-validator"
 DEFAULTS = {"provider": "ollama", "model": "llama3"}
@@ -113,24 +119,25 @@ def apply_guardrails(text: str, score: BrandVoiceScore) -> BrandVoiceScore:
     return score
 
 
-def display_score(score: BrandVoiceScore):
+def display_score(score: BrandVoiceScore, out_console: Optional[Console] = None):
     """Rich display of the score result."""
+    target_console = out_console or console
     color = "green" if score.is_pass else "red"
-    console.print(
+    target_console.print(
         f"\n[bold {color}]OVERALL SCORE: {score.overall_score}/10[/bold {color}]"
     )
-    console.print(
+    target_console.print(
         f"[bold]Pass:[/bold] {'[green]YES[/green]' if score.is_pass else '[red]NO[/red]'}"
     )
-    console.print(f"\n[bold]Summary:[/bold]\n{score.summary}")
+    target_console.print(f"\n[bold]Summary:[/bold]\n{score.summary}")
 
     if score.strengths:
-        console.print("\n[bold green]Strengths:[/bold green]")
+        target_console.print("\n[bold green]Strengths:[/bold green]")
         for strength in score.strengths:
-            console.print(f"  • {strength}")
+            target_console.print(f"  • {strength}")
 
     if score.violations:
-        console.print("\n[bold red]Violations:[/bold red]")
+        target_console.print("\n[bold red]Violations:[/bold red]")
         table = Table(show_header=True, header_style="bold red")
         table.add_column("Rule", style="dim", width=20)
         table.add_column("Message")
@@ -138,12 +145,20 @@ def display_score(score: BrandVoiceScore):
 
         for v in score.violations:
             table.add_row(v.rule, v.message, v.passage or "N/A")
-        console.print(table)
+        target_console.print(table)
 
 
-def _resolve_paths_or_raise(input_file: Path) -> tuple[Path, Path]:
-    if not input_file.exists():
-        raise InputFileNotFoundError(f"File {input_file} not found.")
+def _resolve_paths_or_raise(
+    input_file: Optional[Path] = None, is_pipe: bool = False
+) -> tuple[str, str, Path]:
+    if is_pipe:
+        text_to_score = sys.stdin.read()
+        source_location = "stdin"
+    else:
+        if input_file is None or not input_file.exists():
+            raise InputFileNotFoundError(f"File {input_file} not found.")
+        text_to_score = input_file.read_text(encoding="utf-8")
+        source_location = str(input_file)
 
     vault_path = os.getenv("OBSIDIAN_VAULT_PATH")
     if not vault_path:
@@ -155,7 +170,7 @@ def _resolve_paths_or_raise(input_file: Path) -> tuple[Path, Path]:
             f"Brand voice file not found at {brand_voice_file}"
         )
 
-    return input_file, brand_voice_file
+    return text_to_score, source_location, brand_voice_file
 
 
 def _resolve_llm_or_raise(
@@ -193,7 +208,16 @@ def _score_or_raise(
 
 @app.command()
 def score(
-    input_file: Path = typer.Option(..., "--input", "-i", help="Input file path."),
+    path: Annotated[
+        Optional[Path],
+        typer.Argument(help="Optional input file (or '-' for stdin)."),
+    ] = None,
+    input_file: Annotated[
+        Optional[Path],
+        typer.Option("--input", "-i", help="Input file path."),
+    ] = None,
+    pipe: Annotated[bool, pipe_option()] = False,
+    json_output: Annotated[bool, json_option()] = False,
     provider: Annotated[str, provider_option(PROVIDERS)] = os.environ.get(
         "MODEL_PROVIDER", "ollama"
     ),
@@ -207,8 +231,24 @@ def score(
     """Score a file against brand voice."""
     dry_run = resolve_dry_run(dry_run, no_llm)
 
+    log_level = (
+        logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
+    )
+    setup_logging(level=log_level, tool_name=TOOL_NAME, persist_warnings=True)
+
+    target_file = input_file or path
+    is_pipe = pipe or (target_file is not None and str(target_file) == "-")
+
+    if not is_pipe and target_file is None:
+        console.print(
+            "[red]Error: Must provide an input file (--input/-i) or pipe via stdin.[/red]"
+        )
+        raise typer.Exit(1)
+
     try:
-        input_file, brand_voice_file = _resolve_paths_or_raise(input_file)
+        text_to_score, source_location, brand_voice_file = _resolve_paths_or_raise(
+            target_file, is_pipe=is_pipe
+        )
     except (
         InputFileNotFoundError,
         VaultPathMissingError,
@@ -217,8 +257,7 @@ def score(
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
 
-    brand_voice_doc = brand_voice_file.read_text()
-    text_to_score = input_file.read_text()
+    brand_voice_doc = brand_voice_file.read_text(encoding="utf-8")
 
     try:
         llm = _resolve_llm_or_raise(provider, model, debug, no_llm)
@@ -230,13 +269,28 @@ def score(
     user = build_user_prompt(text_to_score)
 
     if verbose:
-        console.print(f"Scoring {input_file} using {llm.model}...")
+        console.print(f"Scoring {source_location} using {llm.model}...")
 
     try:
-        result = _score_or_raise(llm, system, user, str(input_file), text_to_score)
+        result = _score_or_raise(llm, system, user, source_location, text_to_score)
     except ScoringError as e:
         console.print(f"[red]Error during processing: {e}[/red]")
         raise typer.Exit(1)
+
+    if json_output:
+        print(result.model_dump_json(indent=2))
+        if not result.is_pass:
+            raise typer.Exit(1)
+        return
+
+    if is_pipe:
+        err_console = Console(stderr=True)
+        display_score(result, out_console=err_console)
+        if result.is_pass:
+            sys.stdout.write(text_to_score)
+        else:
+            raise typer.Exit(1)
+        return
 
     display_score(result)
 
@@ -245,9 +299,8 @@ def score(
             "\n[yellow][dry-run] Analysis complete. No results persisted.[/yellow]"
         )
     else:
-        # In this specific tool, scoring is mainly an analysis, but we could save it to sidecar
-        # Or just exit. The prompt said "standalone Post 6 demo".
         pass
+
 
 
 if __name__ == "__main__":
