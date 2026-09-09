@@ -38,7 +38,7 @@ from .core import (
 )
 
 TOOL_NAME = "brand-voice-validator"
-DEFAULTS = {"provider": "ollama", "model": "llama3"}
+DEFAULTS = {"provider": "ollama", "model": "llama3.2:3b"}
 _TOOL = register_tool("brand-voice-validator")
 console = Console()
 app = typer.Typer(help="Scores a piece of writing against brand voice rules.")
@@ -107,7 +107,9 @@ def _resolve_llm_or_raise(
     actual_provider = get_setting(
         TOOL_NAME, "provider", cli_val=provider, default="ollama"
     )
-    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    actual_model = get_setting(
+        TOOL_NAME, "model", cli_val=model, default=DEFAULTS["model"]
+    )
     try:
         return resolve_provider(
             PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
