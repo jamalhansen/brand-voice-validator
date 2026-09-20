@@ -1,5 +1,7 @@
 import re
+
 from local_first_common.tracking import timed_run
+
 from .schema import BrandVoiceScore, RuleViolation
 
 
@@ -94,5 +96,5 @@ def _score_or_raise(
             result = apply_guardrails(text_to_score, response)
             run.item_count = 1
             return result
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ScoringError(str(e)) from e

@@ -2,32 +2,29 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
+from local_first_common.cli import (
+    debug_option,
+    dry_run_option,
+    init_config_option,
+    json_option,
+    model_option,
+    no_llm_option,
+    pipe_option,
+    provider_option,
+    resolve_dry_run,
+    resolve_provider,
+    verbose_option,
+)
+from local_first_common.config import get_setting
+from local_first_common.logging import setup_logging
+from local_first_common.providers import PROVIDERS
+from local_first_common.tracking import register_tool
 from rich.console import Console
 from rich.table import Table
 
-from local_first_common.providers import PROVIDERS
-from local_first_common.cli import (
-    init_config_option,
-    provider_option,
-    model_option,
-    dry_run_option,
-    no_llm_option,
-    verbose_option,
-    debug_option,
-    pipe_option,
-    json_option,
-    resolve_provider,
-    resolve_dry_run,
-)
-from local_first_common.logging import setup_logging
-from local_first_common.config import get_setting
-from local_first_common.tracking import register_tool
-
-from .schema import BrandVoiceScore
-from .prompts import build_system_prompt, build_user_prompt
 from .core import (
     BrandVoiceFileNotFoundError,
     InputFileNotFoundError,
@@ -36,6 +33,8 @@ from .core import (
     VaultPathMissingError,
     _score_or_raise,
 )
+from .prompts import build_system_prompt, build_user_prompt
+from .schema import BrandVoiceScore
 
 TOOL_NAME = "brand-voice-validator"
 DEFAULTS = {"provider": "ollama", "model": "llama3.2:3b"}
@@ -44,7 +43,7 @@ console = Console()
 app = typer.Typer(help="Scores a piece of writing against brand voice rules.")
 
 
-def display_score(score: BrandVoiceScore, out_console: Optional[Console] = None):
+def display_score(score: BrandVoiceScore, out_console: Console | None = None):
     """Rich display of the score result."""
     target_console = out_console or console
     color = "green" if score.is_pass else "red"
@@ -74,7 +73,7 @@ def display_score(score: BrandVoiceScore, out_console: Optional[Console] = None)
 
 
 def _resolve_paths_or_raise(
-    input_file: Optional[Path] = None, is_pipe: bool = False
+    input_file: Path | None = None, is_pipe: bool = False
 ) -> tuple[str, str, Path]:
     if is_pipe:
         text_to_score = sys.stdin.read()
@@ -100,7 +99,7 @@ def _resolve_paths_or_raise(
 
 def _resolve_llm_or_raise(
     provider: str,
-    model: Optional[str],
+    model: str | None,
     debug: bool,
     no_llm: bool,
 ):
@@ -114,18 +113,18 @@ def _resolve_llm_or_raise(
         return resolve_provider(
             PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ProviderResolutionError(str(e)) from e
 
 
 @app.command()
 def score(
     path: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Argument(help="Optional input file (or '-' for stdin)."),
     ] = None,
     input_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--input", "-i", help="Input file path."),
     ] = None,
     pipe: Annotated[bool, pipe_option()] = False,
@@ -133,7 +132,7 @@ def score(
     provider: Annotated[str, provider_option(PROVIDERS)] = os.environ.get(
         "MODEL_PROVIDER", "ollama"
     ),
-    model: Annotated[Optional[str], model_option()] = None,
+    model: Annotated[str | None, model_option()] = None,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,

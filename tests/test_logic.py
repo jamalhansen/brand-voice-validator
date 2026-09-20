@@ -1,6 +1,7 @@
 from brand_voice_validator.logic import apply_guardrails
 from brand_voice_validator.schema import BrandVoiceScore
 
+
 def test_apply_guardrails_em_dash():
     text = "This is a test — with an em-dash."
     score = BrandVoiceScore(
