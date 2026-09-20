@@ -111,7 +111,7 @@ def _resolve_llm_or_raise(
     )
     try:
         return resolve_provider(
-            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
+            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm, tool_name=TOOL_NAME
         )
     except Exception as e:
         raise ProviderResolutionError(str(e)) from e
