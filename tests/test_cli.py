@@ -43,10 +43,9 @@ def test_display_score_fail_with_violations(capsys):
 
 
 @patch("brand_voice_validator.cli.resolve_provider")
-@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_success(
-    mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
+    mock_getenv, mock_resolve_provider, tmp_path
 ):
     # Setup mock vault and input file
     vault_path = tmp_path / "vault"
@@ -71,9 +70,6 @@ def test_score_command_success(
         is_pass=True,
     )
     mock_resolve_provider.return_value = mock_llm
-
-    # Mock timed_run context manager
-    mock_timed_run.return_value.__enter__.return_value = MagicMock()
 
     result = runner.invoke(app, ["--input", str(input_file), "--no-llm"])
 
@@ -120,10 +116,9 @@ def test_score_command_provider_resolution_error(
 
 
 @patch("brand_voice_validator.cli.resolve_provider")
-@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_processing_error(
-    mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
+    mock_getenv, mock_resolve_provider, tmp_path
 ):
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
@@ -139,18 +134,15 @@ def test_score_command_processing_error(
     mock_llm.complete.side_effect = RuntimeError("completion blew up")
     mock_resolve_provider.return_value = mock_llm
 
-    mock_timed_run.return_value.__enter__.return_value = MagicMock()
-
     result = runner.invoke(app, ["--input", str(input_file), "--no-llm"])
     assert result.exit_code == 1
     assert "Error during processing: completion blew up" in result.stdout
 
 
 @patch("brand_voice_validator.cli.resolve_provider")
-@patch("brand_voice_validator.core.timed_run")
 @patch("os.getenv")
 def test_score_command_json_and_pipe(
-    mock_getenv, mock_timed_run, mock_resolve_provider, tmp_path
+    mock_getenv, mock_resolve_provider, tmp_path
 ):
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
@@ -168,7 +160,6 @@ def test_score_command_json_and_pipe(
         is_pass=True,
     )
     mock_resolve_provider.return_value = mock_llm
-    mock_timed_run.return_value.__enter__.return_value = MagicMock()
 
     # Test --json
     input_file = tmp_path / "input.md"

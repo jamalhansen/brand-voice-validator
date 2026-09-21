@@ -1,7 +1,5 @@
 import re
 
-from local_first_common.tracking import timed_run
-
 from .schema import BrandVoiceScore, RuleViolation
 
 
@@ -89,12 +87,9 @@ def _score_or_raise(
     llm, system: str, user: str, source_location: str, text_to_score: str
 ) -> BrandVoiceScore:
     try:
-        with timed_run(
-            "brand-voice-validator", llm.model, source_location=source_location
-        ) as run:
-            response = llm.complete(system, user, response_model=BrandVoiceScore)
-            result = apply_guardrails(text_to_score, response)
-            run.item_count = 1
-            return result
+        llm.source_location = source_location
+        llm.item_count = 1
+        response = llm.complete(system, user, response_model=BrandVoiceScore)
+        return apply_guardrails(text_to_score, response)
     except Exception as e:
         raise ScoringError(str(e)) from e
