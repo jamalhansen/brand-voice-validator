@@ -1,4 +1,4 @@
-from brand_voice_validator.logic import apply_guardrails
+from brand_voice_validator.core import apply_guardrails
 from brand_voice_validator.schema import BrandVoiceScore
 
 
