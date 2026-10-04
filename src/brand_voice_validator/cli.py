@@ -166,7 +166,7 @@ def score(
         BrandVoiceFileNotFoundError,
     ) as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     brand_voice_doc = brand_voice_file.read_text(encoding="utf-8")
 
@@ -174,7 +174,7 @@ def score(
         llm = _resolve_llm_or_raise(provider, model, debug, no_llm)
     except ProviderResolutionError as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     system = build_system_prompt(brand_voice_doc)
     user = build_user_prompt(text_to_score)
@@ -186,7 +186,7 @@ def score(
         result = _score_or_raise(llm, system, user, source_location, text_to_score)
     except ScoringError as e:
         console.print(f"[red]Error during processing: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if json_output:
         print(result.model_dump_json(indent=2))
