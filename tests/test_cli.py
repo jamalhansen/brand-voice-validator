@@ -27,9 +27,7 @@ def test_display_score_pass(capsys):
 def test_display_score_fail_with_violations(capsys):
     score = BrandVoiceScore(
         overall_score=4.0,
-        violations=[
-            RuleViolation(rule="No Emoji", message="Found 🚀", passage="emoji 🚀")
-        ],
+        violations=[RuleViolation(rule="No Emoji", message="Found 🚀", passage="emoji 🚀")],
         summary="Too many emojis.",
         strengths=[],
         is_pass=False,
@@ -44,9 +42,7 @@ def test_display_score_fail_with_violations(capsys):
 
 @patch("brand_voice_validator.cli.resolve_provider")
 @patch("os.getenv")
-def test_score_command_success(
-    mock_getenv, mock_resolve_provider, tmp_path
-):
+def test_score_command_success(mock_getenv, mock_resolve_provider, tmp_path):
     # Setup mock vault and input file
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
@@ -96,9 +92,7 @@ def test_score_command_no_vault_path(mock_getenv, tmp_path):
 
 @patch("brand_voice_validator.cli.resolve_provider")
 @patch("os.getenv")
-def test_score_command_provider_resolution_error(
-    mock_getenv, mock_resolve_provider, tmp_path
-):
+def test_score_command_provider_resolution_error(mock_getenv, mock_resolve_provider, tmp_path):
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
     brand_dir.mkdir(parents=True)
@@ -117,9 +111,7 @@ def test_score_command_provider_resolution_error(
 
 @patch("brand_voice_validator.cli.resolve_provider")
 @patch("os.getenv")
-def test_score_command_processing_error(
-    mock_getenv, mock_resolve_provider, tmp_path
-):
+def test_score_command_processing_error(mock_getenv, mock_resolve_provider, tmp_path):
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
     brand_dir.mkdir(parents=True)
@@ -141,9 +133,7 @@ def test_score_command_processing_error(
 
 @patch("brand_voice_validator.cli.resolve_provider")
 @patch("os.getenv")
-def test_score_command_json_and_pipe(
-    mock_getenv, mock_resolve_provider, tmp_path
-):
+def test_score_command_json_and_pipe(mock_getenv, mock_resolve_provider, tmp_path):
     vault_path = tmp_path / "vault"
     brand_dir = vault_path / "brand"
     brand_dir.mkdir(parents=True)
@@ -172,4 +162,3 @@ def test_score_command_json_and_pipe(
     res_pipe = runner.invoke(app, ["-", "--no-llm"], input="Input text with python reference")
     assert res_pipe.exit_code == 0
     assert "Input text with python reference" in res_pipe.stdout
-

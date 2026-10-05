@@ -47,12 +47,8 @@ def display_score(score: BrandVoiceScore, out_console: Console | None = None):
     """Rich display of the score result."""
     target_console = out_console or console
     color = "green" if score.is_pass else "red"
-    target_console.print(
-        f"\n[bold {color}]OVERALL SCORE: {score.overall_score}/10[/bold {color}]"
-    )
-    target_console.print(
-        f"[bold]Pass:[/bold] {"[green]YES[/green]" if score.is_pass else "[red]NO[/red]"}"
-    )
+    target_console.print(f"\n[bold {color}]OVERALL SCORE: {score.overall_score}/10[/bold {color}]")
+    target_console.print(f"[bold]Pass:[/bold] {'[green]YES[/green]' if score.is_pass else '[red]NO[/red]'}")
     target_console.print(f"\n[bold]Summary:[/bold]\n{score.summary}")
 
     if score.strengths:
@@ -72,9 +68,7 @@ def display_score(score: BrandVoiceScore, out_console: Console | None = None):
         target_console.print(table)
 
 
-def _resolve_paths_or_raise(
-    input_file: Path | None = None, is_pipe: bool = False
-) -> tuple[str, str, Path]:
+def _resolve_paths_or_raise(input_file: Path | None = None, is_pipe: bool = False) -> tuple[str, str, Path]:
     if is_pipe:
         text_to_score = sys.stdin.read()
         source_location = "stdin"
@@ -90,9 +84,7 @@ def _resolve_paths_or_raise(
 
     brand_voice_file = Path(vault_path) / "brand" / "_BRAND_VOICE.md"
     if not brand_voice_file.exists():
-        raise BrandVoiceFileNotFoundError(
-            f"Brand voice file not found at {brand_voice_file}"
-        )
+        raise BrandVoiceFileNotFoundError(f"Brand voice file not found at {brand_voice_file}")
 
     return text_to_score, source_location, brand_voice_file
 
@@ -103,12 +95,8 @@ def _resolve_llm_or_raise(
     debug: bool,
     no_llm: bool,
 ):
-    actual_provider = get_setting(
-        TOOL_NAME, "provider", cli_val=provider, default="ollama"
-    )
-    actual_model = get_setting(
-        TOOL_NAME, "model", cli_val=model, default=DEFAULTS["model"]
-    )
+    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model, default=DEFAULTS["model"])
     try:
         return resolve_provider(
             PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm, tool_name=TOOL_NAME
@@ -129,9 +117,7 @@ def score(
     ] = None,
     pipe: Annotated[bool, pipe_option()] = False,
     json_output: Annotated[bool, json_option()] = False,
-    provider: Annotated[str, provider_option(PROVIDERS)] = os.environ.get(
-        "MODEL_PROVIDER", "ollama"
-    ),
+    provider: Annotated[str, provider_option(PROVIDERS)] = os.environ.get("MODEL_PROVIDER", "ollama"),
     model: Annotated[str | None, model_option()] = None,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
@@ -142,24 +128,18 @@ def score(
     """Score a file against brand voice."""
     dry_run = resolve_dry_run(dry_run, no_llm)
 
-    log_level = (
-        logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
-    )
+    log_level = logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
     setup_logging(level=log_level, tool_name=TOOL_NAME, persist_warnings=True)
 
     target_file = input_file or path
     is_pipe = pipe or (target_file is not None and str(target_file) == "-")
 
     if not is_pipe and target_file is None:
-        console.print(
-            "[red]Error: Must provide an input file (--input/-i) or pipe via stdin.[/red]"
-        )
+        console.print("[red]Error: Must provide an input file (--input/-i) or pipe via stdin.[/red]")
         raise typer.Exit(1)
 
     try:
-        text_to_score, source_location, brand_voice_file = _resolve_paths_or_raise(
-            target_file, is_pipe=is_pipe
-        )
+        text_to_score, source_location, brand_voice_file = _resolve_paths_or_raise(target_file, is_pipe=is_pipe)
     except (
         InputFileNotFoundError,
         VaultPathMissingError,
@@ -206,9 +186,7 @@ def score(
     display_score(result)
 
     if dry_run:
-        console.print(
-            "\n[yellow][dry-run] Analysis complete. No results persisted.[/yellow]"
-        )
+        console.print("\n[yellow][dry-run] Analysis complete. No results persisted.[/yellow]")
     else:
         pass
 

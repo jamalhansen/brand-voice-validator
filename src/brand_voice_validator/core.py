@@ -83,9 +83,7 @@ def apply_guardrails(text: str, score: BrandVoiceScore) -> BrandVoiceScore:
     return score
 
 
-def _score_or_raise(
-    llm, system: str, user: str, source_location: str, text_to_score: str
-) -> BrandVoiceScore:
+def _score_or_raise(llm, system: str, user: str, source_location: str, text_to_score: str) -> BrandVoiceScore:
     try:
         llm.source_location = source_location
         llm.item_count = 1

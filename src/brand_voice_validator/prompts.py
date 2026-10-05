@@ -29,5 +29,6 @@ You must respond with a JSON object that matches the following structure:
 }}
 """
 
+
 def build_user_prompt(text: str) -> str:
     return f"Please score the following text against the brand voice:\n\n---\n{text}\n---\n"
